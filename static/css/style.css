@@ -1,6 +1,6 @@
-body {
+/* body {
 
-}
+} */
 
 header {
     background-color: white;
@@ -12,4 +12,13 @@ footer {
 
 #dropdown-logo {
     margin-right: 10px;
+}
+
+#login-box {
+    max-width: 400px !important;
+    padding-top: 200px !important;
+}
+
+#logo-image {
+    margin-right: 40px;
 }

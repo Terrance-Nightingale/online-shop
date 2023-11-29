@@ -50,6 +50,13 @@ def home():
     return render_template("index.html", logged_in=status, manager=identity)
 
 
+@app.route("/login")
+def login():
+    status = False
+    identity = False
+    return render_template("login.html", logged_in=status, manager=identity)
+
+
 # @app.route("/syrups")
 # def syrup():
 #     # db_items = db.session.execute(db.select(Item).order_by('id')).scalars()
