@@ -1,4 +1,5 @@
 import os
+import forms
 from turtle import back
 from dotenv import load_dotenv
 from flask import Flask, abort, flash, jsonify, render_template, redirect, url_for, request
@@ -29,14 +30,25 @@ login_manager = LoginManager()
 login_manager.init_app(app)
 
 @login_manager.user_loader
-def load_user(user):
-    return User.get(user)
+def load_user(user_id):
+    return db.get_or_404(User, user_id)
+
+
+def admin_only(f):
+    @wraps(f)
+    def decorated_function(*args, **kwargs):
+        if current_user.id != 1:
+            return abort(403)
+        return f(*args, **kwargs)
+    return decorated_function
+
 
 # User Config
 class User(UserMixin, db.Model):
     __tablename__ = "users"
     id = db.Column(db.Integer, primary_key=True)
     username = db.Column(db.String(250), unique=True, nullable=False)
+    email = db.Column(db.String(250), unique=True, nullable=False)
     password = db.Column(db.String(50), unique=False, nullable=False)
     clearance = db.Column(db.Boolean, unique=False, nullable=False)
     orders = relationship("Order", back_populates="customer")
@@ -48,7 +60,9 @@ class Item(db.Model):
     id = db.Column(db.Integer, primary_key=True)
     name = db.Column(db.String(250), unique=True, nullable=False)
     price = db.Column(db.Float, unique=False, nullable=False)
-    volume = db.Column(db.Float, unique=False, nullable=True)
+    unit = db.Column(db.Float, unique=False, nullable=False)
+    unit_amt = db.Column(db.Float, unique=False, nullable=False)
+    img_url = db.Column(db.String, unique=True, nullable=False)
     stock = db.Column(db.Integer, unique=False, nullable=False)
 
 
@@ -76,18 +90,51 @@ with app.app_context():
 
 @app.route("/")
 def home():
-    status = False
-    identity = False
     # db_items = db.session.execute(db.select(Item).order_by('id')).scalars()
     # items = [cafe for cafe in db_cafes]
-    return render_template("index.html", logged_in=status, manager=identity)
+    return render_template("index.html", logged_in=current_user.is_authenticated)
 
 
-@app.route("/login")
+@app.route("/login", methods=['GET', 'POST'])
 def login():
     status = False
     identity = False
     return render_template("login.html", logged_in=status, manager=identity)
+
+
+@app.route('/logout', methods=["GET", "POST"])
+def logout():
+    logout_user()
+    return redirect(url_for('home'))
+
+
+@app.route('/sign-up', methods=["GET", "POST"])
+def sign_up():
+    form = forms.SignupForm()
+    if form.validate_on_submit():
+        email = form.email.data
+        hash_password = generate_password_hash(form.password.data, salt_length=8)
+        user = db.session.execute(db.select(User).where(User.email == email)).scalar()
+        if not user:
+            if email == os.getenv('ADMIN_EMAIL'):
+                clearance = True
+            else:
+                clearance = False
+
+            new_user = User(
+                email = email,
+                username = form.username.data,
+                password = hash_password,
+                clearance = clearance
+            )
+            db.session.add(new_user)
+            db.session.commit()
+            login_user(new_user)
+            return redirect(url_for("home"))
+        else:
+            flash("That email is already registered. Please log in.")
+            return redirect(url_for("login", logged_in=current_user.is_authenticated))
+    return render_template("sign_up.html", form=form)
 
 
 # @app.route("/add-item")

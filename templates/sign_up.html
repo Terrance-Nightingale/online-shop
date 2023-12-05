@@ -1,0 +1,15 @@
+{% from "bootstrap5/form.html" import render_form %}
+{% include "header.html" %}
+
+<main class="mb-4" style="padding-top: 200px;">
+    <div class="container my-auto">
+      <div class="row">
+        <div class="col-lg-8 col-md-10 mx-auto">
+            <h1 style="margin-bottom: 10px;">Account Registration Form</h1>
+            {{ render_form(form) }}
+        </div>
+      </div>
+    </div>
+  </main>
+
+{% include "footer.html" %}

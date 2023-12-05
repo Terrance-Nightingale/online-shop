@@ -49,3 +49,4 @@ _testmain.go
 *.psd
 *.json
 .env
+*.db

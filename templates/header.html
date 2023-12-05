@@ -30,10 +30,10 @@
               <li><a class="dropdown-item" href="{{ url_for('home') }}">Seasoning</a></li>
             </ul>
           </span></li>
-          {% if manager: %}
+          <!-- {% if manager: %} -->
           <li><a href="#" class="nav-link px-2 link-body-emphasis">Inventory</a></li>
           <li><a href="#" class="nav-link px-2 link-body-emphasis">Customers</a></li>
-          {% endif %}
+          <!-- {% endif %} -->
         </ul>
 
         <!-- Search Bar -->
@@ -64,10 +64,10 @@
                 <li><a class="dropdown-item" href="#"><i class="bi bi-clipboard" id="dropdown-logo"></i>My Orders</a></li>
                 <li><a class="dropdown-item" href="#"><i class="bi bi-cart" id="dropdown-logo"></i>Checkout</a></li>
                 <li><hr class="dropdown-divider"></li>
-                <li><a class="dropdown-item" href="#">Log out</a></li>
+                <li><a class="dropdown-item" href="{{ url_for('logout') }}">Log out</a></li>
                 {% else: %}
                 <li><hr class="dropdown-divider"></li>
-                <li><a class="dropdown-item" href="#">Sign up</a></li>
+                <li><a class="dropdown-item" href="{{ url_for('sign_up') }}">Sign up</a></li>
                 <li><a class="dropdown-item" href="{{ url_for('login') }}">Log in</a></li>
                 {% endif %}
               </ul>
