@@ -63,6 +63,10 @@
                 <li><a class="dropdown-item" href="#"><i class="bi bi-gear" id="dropdown-logo"></i>Settings</a></li>
                 <li><a class="dropdown-item" href="#"><i class="bi bi-clipboard" id="dropdown-logo"></i>My Orders</a></li>
                 <li><a class="dropdown-item" href="#"><i class="bi bi-cart" id="dropdown-logo"></i>Checkout</a></li>
+                  {% if current_user.id == 1: %}
+                  <li><hr class="dropdown-divider"></li>
+                  <li><a class="dropdown-item" href="{{ url_for('add_item') }}">Add new item</a></li>
+                  {% endif %}
                 <li><hr class="dropdown-divider"></li>
                 <li><a class="dropdown-item" href="{{ url_for('logout') }}">Log out</a></li>
                 {% else: %}

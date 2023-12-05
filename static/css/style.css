@@ -1,7 +1,3 @@
-/* body {
-
-} */
-
 header {
     background-color: white;
 }
@@ -19,10 +15,12 @@ footer {
     padding-top: 200px !important;
 }
 
+#additem-box {
+    max-width: 400px !important;
+    padding-top: 200px !important;
+    margin-bottom: 200px !important;
+}
+
 #logo-image {
     margin-right: 40px;
 }
-
-/* #form {
-    margin-top: 200px;
-} */

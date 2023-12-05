@@ -2,8 +2,7 @@
 {% include "header.html" %}
 
 <body>
-    <main class="w-100 m-auto align-items-center" id="login-box">
-        <img class="mb-4" src="/static/assets/images/placeholder-logo.svg" alt="company logo" width="72" height="57">
+    <main class="w-100 m-auto align-items-center" id="additem-box">
         {% with messages = get_flashed_messages() %}
           {% if messages %}
             {% for message in messages %}
@@ -11,12 +10,11 @@
             {% endfor %}
           {% endif %}
         {% endwith %}
-          <h1 class="h3 mb-3 fw-normal">Please sign in</h1>
+          <h1 class="h3 mb-3 fw-normal">New Item Form</h1>
           {{ render_form(form) }}
       </main>
 
     <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/js/bootstrap.bundle.min.js" integrity="sha384-C6RzsynM9kWDrMNeT87bh95OGNyZPhcTNXj1NW7RuBCsyN/o0jlpcV8Qyq46cDfL" crossorigin="anonymous"></script>
 </body>
-
 
 {% include "footer.html" %}

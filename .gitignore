@@ -50,3 +50,4 @@ _testmain.go
 *.json
 .env
 *.db
+*.pyc

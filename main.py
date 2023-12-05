@@ -1,5 +1,5 @@
 import os
-import forms
+from forms import *
 from turtle import back
 from dotenv import load_dotenv
 from flask import Flask, abort, flash, jsonify, render_template, redirect, url_for, request
@@ -36,11 +36,11 @@ def load_user(user_id):
 
 def admin_only(f):
     @wraps(f)
-    def decorated_function(*args, **kwargs):
+    def wrapper(*args, **kwargs):
         if current_user.id != 1:
             return abort(403)
         return f(*args, **kwargs)
-    return decorated_function
+    return wrapper
 
 
 # User Config
@@ -60,7 +60,7 @@ class Item(db.Model):
     id = db.Column(db.Integer, primary_key=True)
     name = db.Column(db.String(250), unique=True, nullable=False)
     price = db.Column(db.Float, unique=False, nullable=False)
-    unit = db.Column(db.Float, unique=False, nullable=False)
+    unit = db.Column(db.String, unique=False, nullable=False)
     unit_amt = db.Column(db.Float, unique=False, nullable=False)
     img_url = db.Column(db.String, unique=True, nullable=False)
     stock = db.Column(db.Integer, unique=False, nullable=False)
@@ -84,8 +84,9 @@ class Order(UserMixin, db.Model):
     items = relationship("OrderItem", back_populates="parent_order")
 
 
-with app.app_context():
-    db.create_all()
+# --- Initialize db for first time --- #
+# with app.app_context():
+#     db.create_all()
 
 
 @app.route("/")
@@ -97,9 +98,21 @@ def home():
 
 @app.route("/login", methods=['GET', 'POST'])
 def login():
-    status = False
-    identity = False
-    return render_template("login.html", logged_in=status, manager=identity)
+    form = LoginForm()
+    if request.method == "POST":
+        email = request.form.get('email')
+        password = request.form.get('password')
+        user = db.session.execute(db.select(User).where(User.email == email)).scalar()
+        if not user:
+            flash("That email does not have an account. Please try again.")
+            return redirect(url_for("login", form=form))
+        elif not check_password_hash(user.password, password):
+            flash("Incorrect password. Please try again.")
+            return redirect(url_for("login", form=form))
+        else:
+            login_user(user)
+            return redirect(url_for("home"))
+    return render_template("login.html", form=form, logged_in=current_user.is_authenticated)
 
 
 @app.route('/logout', methods=["GET", "POST"])
@@ -110,7 +123,7 @@ def logout():
 
 @app.route('/sign-up', methods=["GET", "POST"])
 def sign_up():
-    form = forms.SignupForm()
+    form = SignupForm()
     if form.validate_on_submit():
         email = form.email.data
         hash_password = generate_password_hash(form.password.data, salt_length=8)
@@ -137,11 +150,41 @@ def sign_up():
     return render_template("sign_up.html", form=form)
 
 
-# @app.route("/add-item")
-# def login():
-#     status = False
-#     identity = False
-#     return render_template("login.html", logged_in=status, manager=identity)
+@app.route("/add-item", methods=['GET', 'POST'])
+@admin_only
+def add_item():
+    form = ItemForm()
+    if form.validate_on_submit():
+        new_item = Item(
+            name = form.name.data,
+            price = form.price.data,
+            unit = form.unit.data,
+            unit_amt = form.unit_amt.data,
+            img_url = form.img_url.data,
+            stock = form.stock.data,
+        )
+        db.session.add(new_item)
+        db.session.commit()
+        return redirect(url_for("home", logged_in=current_user.is_authenticated))
+    return render_template("add_item.html", current_user=current_user, form=form, logged_in=current_user.is_authenticated)
+
+
+@app.route("/edit-item/<int:item_id>")
+@admin_only
+def edit_item(item_id):
+    form = ItemForm()
+    item = db.get_or_404(Item, item_id)
+    if form.validate_on_submit():
+        item.name = form.name.data
+        item.price = form.price.data
+        item.unit = form.unit.data
+        item.unit_amt = form.unit_amt.data
+        item.img_url = form.img_url.data
+        item.stock = form.stock.data
+    
+        db.session.commit()
+        return redirect(url_for("home"))
+    return render_template("edit_item.html", current_user=current_user, form=form, current_item=item)
 
 
 # @app.route("/syrups")
