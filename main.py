@@ -2,7 +2,7 @@ import os
 from forms import *
 from turtle import back
 from dotenv import load_dotenv
-from flask import Flask, abort, flash, jsonify, render_template, redirect, url_for, request
+from flask import Flask, abort, flash, render_template, redirect, url_for, request
 from flask_wtf import FlaskForm
 from wtforms import StringField, SubmitField, PasswordField
 from wtforms.validators import DataRequired, URL
