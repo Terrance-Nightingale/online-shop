@@ -59,10 +59,11 @@ class Item(db.Model):
     __tablename__ = "items"
     id = db.Column(db.Integer, primary_key=True)
     name = db.Column(db.String(250), unique=True, nullable=False)
+    category = db.Column(db.String, unique=False, nullable=False)
     price = db.Column(db.Float, unique=False, nullable=False)
     unit = db.Column(db.String, unique=False, nullable=False)
     unit_amt = db.Column(db.Float, unique=False, nullable=False)
-    img_url = db.Column(db.String, unique=True, nullable=False)
+    img_url = db.Column(db.String, unique=False, nullable=False)
     stock = db.Column(db.Integer, unique=False, nullable=False)
 
 
@@ -91,9 +92,9 @@ class Order(UserMixin, db.Model):
 
 @app.route("/")
 def home():
-    # db_items = db.session.execute(db.select(Item).order_by('id')).scalars()
-    # items = [cafe for cafe in db_cafes]
-    return render_template("index.html", logged_in=current_user.is_authenticated)
+    db_items = db.session.execute(db.select(Item).order_by('id')).scalars()
+    items = [item for item in db_items]
+    return render_template("index.html", logged_in=current_user.is_authenticated, items=items)
 
 
 @app.route("/login", methods=['GET', 'POST'])
@@ -157,6 +158,7 @@ def add_item():
     if form.validate_on_submit():
         new_item = Item(
             name = form.name.data,
+            category = form.category.data,
             price = form.price.data,
             unit = form.unit.data,
             unit_amt = form.unit_amt.data,
