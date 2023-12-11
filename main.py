@@ -150,6 +150,11 @@ def sign_up():
             return redirect(url_for("login", logged_in=current_user.is_authenticated))
     return render_template("sign_up.html", form=form)
 
+@app.route('/item/<int:item_id>', methods=["GET", "POST"])
+def goto_item(item_id):
+    return render_template("item.html", logged_in=current_user.is_authenticated)
+
+
 
 @app.route("/add-item", methods=['GET', 'POST'])
 @admin_only

@@ -16,6 +16,7 @@ html {
 }
 
 #main-wrapper {
+    background-color: white;
     box-sizing: border-box;
     min-height: 100%;
     padding: 0 0 100px;
@@ -23,16 +24,30 @@ html {
 }
 
 footer {
-    background-color: white;
-    bottom: 0;
-    height: 100px;
-    left: 0;
-    position: absolute;
-    width: 100%;
+    background-color: whitesmoke !important;
 }
 
 header {
     background-color: white;
+}
+
+.item-link {
+    text-decoration: none;
+    color: black;
+    font-size: 20px;
+}
+
+.button-link {
+    text-decoration: none;
+    color: white
+}
+
+#footer {
+    background-color: whitesmoke !important;
+    position: absolute;
+    bottom: 0;
+    width: 100%;
+    height: 2.5rem;
 }
 
 #dropdown-logo {
@@ -54,9 +69,14 @@ header {
     margin-right: 40px;
 }
 
+#content-box {
+    background-color: white;
+}
+
 #christmas-box {
     max-width: 1000px !important;
-    margin-top: 200px !important;
+    margin-top: 100px !important;
+    padding-top: 100px;
 }
 
 #christmas-ad {
@@ -71,4 +91,9 @@ header {
 
 #item-container {
     margin-bottom: 200px !important;
+}
+
+#item-img {
+    height: 200px;
+    width: 250px;
 }
