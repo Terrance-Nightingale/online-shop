@@ -176,11 +176,19 @@ def add_item():
     return render_template("add_item.html", current_user=current_user, form=form, logged_in=current_user.is_authenticated)
 
 
-@app.route("/edit-item/<int:item_id>")
+@app.route("/edit-item/<int:item_id>", methods=["GET", "POST"])
 @admin_only
 def edit_item(item_id):
-    form = ItemForm()
     item = db.get_or_404(Item, item_id)
+    form = ItemForm(
+        name = item.name,
+        price = item.price,
+        unit = item.unit,
+        unit_amt = item.unit_amt,
+        img_url = item.img_url,
+        stock = item.stock
+    )
+
     if form.validate_on_submit():
         item.name = form.name.data
         item.price = form.price.data
@@ -191,7 +199,16 @@ def edit_item(item_id):
     
         db.session.commit()
         return redirect(url_for("home"))
-    return render_template("edit_item.html", current_user=current_user, form=form, current_item=item)
+    return render_template("add_item.html", current_user=current_user, editing=True, form=form, current_item=item)
+
+
+@app.route("/delete/<int:item_id>")
+@admin_only
+def delete_item(item_id):
+    item_to_delete = db.get_or_404(Item, item_id)
+    db.session.delete(item_to_delete)
+    db.session.commit()
+    return redirect(url_for("home"))
 
 
 # @app.route("/syrups")
