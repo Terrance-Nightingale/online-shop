@@ -1,6 +1,6 @@
 from decimal import Decimal
 from flask_wtf import FlaskForm
-from wtforms import DecimalField, IntegerField, SelectField, StringField, SubmitField, PasswordField
+from wtforms import DecimalField, FileField, IntegerField, SelectField, StringField, SubmitField, PasswordField
 from wtforms.validators import DataRequired, URL
 from flask_ckeditor import CKEditorField
 
@@ -30,3 +30,17 @@ class LoginForm(FlaskForm):
     email = StringField("Email", validators=[DataRequired()])
     password = PasswordField("Password", validators=[DataRequired()])
     submit = SubmitField("Log In")
+
+
+# Profile Edit Form
+class EditProfileForm(FlaskForm):
+    username = StringField("Username")
+    email = StringField("Email")
+    submit = SubmitField("Save Edits")
+
+
+# Change Password Form
+class ChangePassForm(FlaskForm):
+    password = StringField("New Password", validators=[DataRequired()])
+    verify_pass = PasswordField("Verify Password", validators=[DataRequired()])
+    submit = SubmitField("Save Edits")

@@ -25,9 +25,9 @@
           <li><span class="dropdown text-end">
             <a href="#" class="nav-link px-2 link-body-emphasis text-decoration-none dropdown-toggle" data-bs-toggle="dropdown" aria-expanded="false">Products</a>
             <ul class="dropdown-menu text-large">
-              <li><a class="dropdown-item" href="{{ url_for('home') }}">Syrup</a></li>
-              <li><a class="dropdown-item" href="{{ url_for('home') }}">Hot Sauce</a></li>
-              <li><a class="dropdown-item" href="{{ url_for('home') }}">Seasoning</a></li>
+              <li><a class="dropdown-item" href="{{ url_for('syrup') }}">Syrup</a></li>
+              <li><a class="dropdown-item" href="{{ url_for('hot_sauce') }}">Hot Sauce</a></li>
+              <li><a class="dropdown-item" href="{{ url_for('jam') }}">Jam/Jelly</a></li>
             </ul>
           </span></li>
           <!-- {% if manager: %} -->
@@ -41,7 +41,6 @@
           <div class="input-group">
             <span class="input-group-text" id="basic-addon1" style="max-height: 38px;">
               <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" fill="currentColor" class="bi bi-search" viewBox="0 0 16 16">
-                <path d="M11.742 10.344a6.5 6.5 0 1 0-1.397 1.398h-.001c.03.04.062.078.098.115l3.85 3.85a1 1 0 0 0 1.415-1.414l-3.85-3.85a1.007 1.007 0 0 0-.115-.1zM12 6.5a5.5 5.5 0 1 1-11 0 5.5 5.5 0 0 1 11 0z"></path>
               </svg>
             </span>
             <form class="col-6 col-sm-6 col-lg-6 mb-3 mb-lg-0 me-lg-3" role="search">
@@ -51,7 +50,7 @@
             <div class="dropdown text-end" style="margin-left: 10px;">
               <a href="#" class="d-block link-body-emphasis text-decoration-none dropdown-toggle" data-bs-toggle="dropdown" aria-expanded="false">
                 {% if logged_in: %}
-                <img src="https://github.com/mdo.png" alt="mdo" width="32" height="32" class="rounded-circle">
+                <img src="https://upload.wikimedia.org/wikipedia/commons/2/2c/Default_pfp.svg" alt="mdo" width="32" height="32" class="rounded-circle">
                 {% else: %}
                 Login
                 {% endif %}
@@ -60,7 +59,7 @@
                 <li><a class="dropdown-item" href="{{ url_for('home') }}"><i class="bi bi-house" id="dropdown-logo"></i>Home</a></li>
                 {% if logged_in: %}
                 <li><a class="dropdown-item" href="#"><i class="bi bi-person" id="dropdown-logo"></i>Profile</a></li>
-                <li><a class="dropdown-item" href="#"><i class="bi bi-gear" id="dropdown-logo"></i>Settings</a></li>
+                <li><a class="dropdown-item" href="{{ url_for('edit_profile', name=current_user.username, user_id=current_user.id) }}"><i class="bi bi-gear" id="dropdown-logo"></i>Edit Profile</a></li>
                 <li><a class="dropdown-item" href="#"><i class="bi bi-clipboard" id="dropdown-logo"></i>My Orders</a></li>
                 <li><a class="dropdown-item" href="#"><i class="bi bi-cart" id="dropdown-logo"></i>Checkout</a></li>
                   {% if current_user.id == 1: %}

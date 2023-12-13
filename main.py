@@ -86,8 +86,8 @@ class Order(UserMixin, db.Model):
 
 
 # --- Initialize db for first time --- #
-# with app.app_context():
-#     db.create_all()
+with app.app_context():
+    db.create_all()
 
 
 @app.route("/")
@@ -129,6 +129,8 @@ def sign_up():
         email = form.email.data
         hash_password = generate_password_hash(form.password.data, salt_length=8)
         user = db.session.execute(db.select(User).where(User.email == email)).scalar()
+        default_pic = "https://upload.wikimedia.org/wikipedia/commons/2/2c/Default_pfp.svg"
+        # http://www.w3.org/2000/svg
         if not user:
             if email == os.getenv('ADMIN_EMAIL'):
                 clearance = True
@@ -150,10 +152,46 @@ def sign_up():
             return redirect(url_for("login", logged_in=current_user.is_authenticated))
     return render_template("sign_up.html", form=form)
 
+
+@app.route('/edit-profile/<string:name>/<int:user_id>', methods=["GET", "POST"])
+def edit_profile(name, user_id):
+    user = db.get_or_404(User, user_id)
+        
+    form = EditProfileForm(
+        username = user.username,
+        email = user.email,
+    )
+
+    if form.validate_on_submit():
+        user.username = form.username.data
+        user.email = form.email.data
+
+        db.session.commit()
+        return redirect(url_for("home", logged_in=current_user.is_authenticated))
+    return render_template("edit_profile.html", logged_in=current_user.is_authenticated, form=form)
+
+
+@app.route('/change-password/<string:name>/<int:user_id>', methods=["GET", "POST"])
+def change_password(name, user_id):
+    user = db.get_or_404(User, user_id) 
+    form = ChangePassForm()
+
+    if request.method == "POST":
+        if form.validate_on_submit() and form.password.data == form.verify_pass.data:
+            hash_password = generate_password_hash(form.verify_pass.data, salt_length=8)
+            user.password = hash_password
+
+            db.session.commit()
+            return redirect(url_for("home", logged_in=current_user.is_authenticated))
+        else:
+            flash("Password must match in both input fields.")
+            return redirect(url_for("change_password", name=name, user_id=user_id, logged_in=current_user.is_authenticated, form=form))
+    return render_template("change_password.html", logged_in=current_user.is_authenticated, form=form)
+
+
 @app.route('/item/<int:item_id>', methods=["GET", "POST"])
 def goto_item(item_id):
     return render_template("item.html", logged_in=current_user.is_authenticated)
-
 
 
 @app.route("/add-item", methods=['GET', 'POST'])
@@ -176,7 +214,7 @@ def add_item():
     return render_template("add_item.html", current_user=current_user, form=form, logged_in=current_user.is_authenticated)
 
 
-@app.route("/edit-item/<int:item_id>", methods=["GET", "POST"])
+@app.route("/edit-item/<int:item_id>", methods=["GET", "POST", "UPDATE"])
 @admin_only
 def edit_item(item_id):
     item = db.get_or_404(Item, item_id)
@@ -199,10 +237,10 @@ def edit_item(item_id):
     
         db.session.commit()
         return redirect(url_for("home"))
-    return render_template("add_item.html", current_user=current_user, editing=True, form=form, current_item=item)
+    return render_template("edit_item.html", current_user=current_user, editing=True, form=form, current_item=item)
 
 
-@app.route("/delete/<int:item_id>")
+@app.route("/delete/<int:item_id>", methods=['DELETE'])
 @admin_only
 def delete_item(item_id):
     item_to_delete = db.get_or_404(Item, item_id)
@@ -211,13 +249,32 @@ def delete_item(item_id):
     return redirect(url_for("home"))
 
 
-# @app.route("/syrups")
-# def syrup():
-#     # db_items = db.session.execute(db.select(Item).order_by('id')).scalars()
-#     # items = [item for item in db_items]
-#     return render_template("syrups.html")
-# # Add salesfront=items as a **kwarg
+@app.route("/syrups")
+def syrup():
+    db_items = db.session.execute(db.select(Item).order_by('id')).scalars()
+    items = [item for item in db_items if item.category == "syrup"]
+    return render_template("index.html", logged_in=current_user.is_authenticated, items=items)
+
+
+@app.route("/hot-sauces")
+def hot_sauce():
+    db_items = db.session.execute(db.select(Item).order_by('id')).scalars()
+    items = [item for item in db_items if item.category == "hotsauce"]
+    return render_template("index.html", logged_in=current_user.is_authenticated, items=items)
+
+
+@app.route("/jams")
+def jam():
+    db_items = db.session.execute(db.select(Item).order_by('id')).scalars()
+    items = [item for item in db_items if item.category == "jam"]
+    return render_template("index.html", logged_in=current_user.is_authenticated, items=items)
 
 
 if __name__ == '__main__':
     app.run(debug=True)
+
+
+# TODO 2) Add page for individual item
+# TODO 3) Add Profile page for editing a user's profile
+# TODO 5) Add page to view My Orders (current and past)
+# TODO 6) Add Checkout page to view cart. If nothing is in the cart, pull up the page showing that cart is empty.
