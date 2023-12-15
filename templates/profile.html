@@ -2,24 +2,14 @@
 
 <body>
     <div class="container" id="main-wrapper">
-        <div class="card mb-4 shadow-sm" id="large-item-box">
-            <div class="row align-items-start">
-                <div class="col">
-                    <div class="card-header py-3">
-                        <img src="{{ item.img_url }}" id="large-item-img">
-                    </div>
-                </div>
-                <div class="col">
-                    <h1>{{ item.name }}</h1>
-                    <h2 style="font-size: 30px !important;">${{ item.price }} / {{ item.unit_amt }} {{ item.unit }}</h2>
-                    <h3>{{ item.description }}</h3>
-                    <a class="button-link" href="{{ url_for('goto_item', item_id=item.id) }}"><button type="button" class="w-90 btn btn-lg btn-primary my-3" href="{{ url_for('goto_item', item_id=item.id) }}">Add to cart</button></a>
-                    {% if current_user.id == 1: %}
-                    <a class="button-link" href="{{url_for('edit_item', item_id=item.id) }}"><button type="button" class="w-90 btn btn-lg btn-primary my-3" id="edit-button">Edit item</button></a>
-                    <a class="button-link" href="{{url_for('confirm_delete_item', item_id=item.id) }}"><button type="button" class="w-90 btn btn-lg btn-primary my-3" id="delete-button">!! Delete item !!</button></a>
-                    {% endif %}
-                </div>
-            </div>
+        <div class="container shadow-sm" id="large-item-box">
+            <ul>
+                <h2>My Profile</h2>
+                <h3>Username: {{ user.username }}</h2>
+                <h3>Email: {{ user.email }}</h2>
+                <a class="button-link" href="{{url_for('edit_profile', user_name=current_user.username, user_id=current_user.id) }}"><button type="button" class="w-100 btn btn-lg btn-primary mb-2" id="edit-button">Edit My Profile</button></a>
+                <a class="button-link" href="{{url_for('change_password', user_name=current_user.username, user_id=current_user.id) }}"><button type="button" class="w-100 btn btn-lg btn-primary my-3">Change Password</button></a>
+            </ul>
         </div>
     </div>
   

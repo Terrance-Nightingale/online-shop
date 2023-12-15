@@ -57,8 +57,8 @@
               <ul class="dropdown-menu text-small">
                 <li><a class="dropdown-item" href="{{ url_for('home') }}"><i class="bi bi-house" id="dropdown-logo"></i>Home</a></li>
                 {% if logged_in: %}
-                <li><a class="dropdown-item" href="#"><i class="bi bi-person" id="dropdown-logo"></i>Profile</a></li>
-                <li><a class="dropdown-item" href="{{ url_for('edit_profile', name=current_user.username, user_id=current_user.id) }}"><i class="bi bi-gear" id="dropdown-logo"></i>Edit Profile</a></li>
+                <li><a class="dropdown-item" href="{{ url_for('profile', user_name=current_user.username, user_id=current_user.id) }}"><i class="bi bi-person" id="dropdown-logo"></i>Profile</a></li>
+                <li><a class="dropdown-item" href="{{ url_for('edit_profile', user_name=current_user.username, user_id=current_user.id) }}"><i class="bi bi-gear" id="dropdown-logo"></i>Edit Profile</a></li>
                 <li><a class="dropdown-item" href="#"><i class="bi bi-clipboard" id="dropdown-logo"></i>My Orders</a></li>
                 <li><a class="dropdown-item" href="#"><i class="bi bi-cart" id="dropdown-logo"></i>Checkout</a></li>
                   {% if current_user.id == 1: %}

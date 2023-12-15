@@ -154,8 +154,14 @@ def sign_up():
     return render_template("sign_up.html", form=form)
 
 
-@app.route('/edit-profile/<string:name>/<int:user_id>', methods=["GET", "POST"])
-def edit_profile(name, user_id):
+@app.route('/<string:user_name>/<int:user_id>/my-profile', methods=["GET", "POST"])
+def profile(user_name, user_id):
+    user = db.get_or_404(User, user_id)
+    return render_template("profile.html", user=user)
+
+
+@app.route('/edit-profile/<string:user_name>/<int:user_id>', methods=["GET", "POST"])
+def edit_profile(user_name, user_id):
     user = db.get_or_404(User, user_id)
         
     form = EditProfileForm(
@@ -172,8 +178,8 @@ def edit_profile(name, user_id):
     return render_template("edit_profile.html", logged_in=current_user.is_authenticated, form=form)
 
 
-@app.route('/change-password/<string:name>/<int:user_id>', methods=["GET", "POST"])
-def change_password(name, user_id):
+@app.route('/change-password/<string:user_name>/<int:user_id>', methods=["GET", "POST"])
+def change_password(user_name, user_id):
     user = db.get_or_404(User, user_id) 
     form = ChangePassForm()
 
@@ -186,7 +192,7 @@ def change_password(name, user_id):
             return redirect(url_for("home", logged_in=current_user.is_authenticated))
         else:
             flash("Password must match in both input fields.")
-            return redirect(url_for("change_password", name=name, user_id=user_id, logged_in=current_user.is_authenticated, form=form))
+            return redirect(url_for("change_password", name=user_name, user_id=user_id, logged_in=current_user.is_authenticated, form=form))
     return render_template("change_password.html", logged_in=current_user.is_authenticated, form=form)
 
 
@@ -297,7 +303,6 @@ if __name__ == '__main__':
     app.run(debug=True)
 
 
-# TODO 3) Add Profile page for editing a user's profile
 # TODO 5) Add page to view My Orders (current and past)
 # TODO 6) Add Checkout page to view cart. If nothing is in the cart, pull up the page showing that cart is empty.
 # TODO 7) Add Inventory page for admin
