@@ -34,12 +34,17 @@ header {
 .item-link {
     text-decoration: none;
     color: black;
-    font-size: 20px;
+    font-size: 30px;
 }
 
 .button-link {
     text-decoration: none;
     color: white
+}
+
+#large-image-card {
+    border-right: 2px solid rgb(110, 109, 109) !important;
+    align-content: center !important;
 }
 
 #footer {
@@ -92,7 +97,31 @@ header {
     margin-bottom: 200px !important;
 }
 
+#large-item-box {
+    padding-top: 200px;
+    display: flex;
+}
+
 #item-img {
     height: 200px;
     width: 250px;
+    border: 1px solid rgb(110, 109, 109)
+}
+
+#large-item-img {
+    height: 400px;
+    width: 500px;
+    justify-self: right !important;
+    margin-right: 0px !important;
+    padding-right: 0px !important;
+}
+
+#delete-button {
+    background-color: crimson;
+    border-color: crimson;
+}
+
+#edit-button {
+    background-color: grey;
+    border-color: grey;
 }

@@ -14,7 +14,13 @@ class ItemForm(FlaskForm):
     unit_amt = DecimalField("Weight/Volume Amount", places=1, validators=[DataRequired()])
     img_url = StringField("Product Image URL", validators=[DataRequired(), URL()])
     stock = IntegerField("Stock", validators=[DataRequired()])
-    submit = SubmitField("Save Item")
+    description = StringField("Item Description", validators=[DataRequired()])
+    submit = SubmitField("Save Changes")
+
+
+#Confirm Item Delete Form
+class ConfirmDeleteForm(FlaskForm):
+    confirmation = SubmitField("Remove item permanently")
 
 
 # Signup Form

@@ -63,6 +63,7 @@ class Item(db.Model):
     price = db.Column(db.Float, unique=False, nullable=False)
     unit = db.Column(db.String, unique=False, nullable=False)
     unit_amt = db.Column(db.Float, unique=False, nullable=False)
+    description = db.Column(db.String, nullable=False)
     img_url = db.Column(db.String, unique=False, nullable=False)
     stock = db.Column(db.Integer, unique=False, nullable=False)
 
@@ -90,6 +91,7 @@ with app.app_context():
     db.create_all()
 
 
+#--- Home Page ---#
 @app.route("/")
 def home():
     db_items = db.session.execute(db.select(Item).order_by('id')).scalars()
@@ -97,6 +99,7 @@ def home():
     return render_template("index.html", logged_in=current_user.is_authenticated, items=items)
 
 
+#--- Account-Relevant Pages ---#
 @app.route("/login", methods=['GET', 'POST'])
 def login():
     form = LoginForm()
@@ -129,8 +132,6 @@ def sign_up():
         email = form.email.data
         hash_password = generate_password_hash(form.password.data, salt_length=8)
         user = db.session.execute(db.select(User).where(User.email == email)).scalar()
-        default_pic = "https://upload.wikimedia.org/wikipedia/commons/2/2c/Default_pfp.svg"
-        # http://www.w3.org/2000/svg
         if not user:
             if email == os.getenv('ADMIN_EMAIL'):
                 clearance = True
@@ -189,9 +190,11 @@ def change_password(name, user_id):
     return render_template("change_password.html", logged_in=current_user.is_authenticated, form=form)
 
 
-@app.route('/item/<int:item_id>', methods=["GET", "POST"])
+#--- Item-Relevant Pages ---#
+@app.route('/item/<int:item_id>')
 def goto_item(item_id):
-    return render_template("item.html", logged_in=current_user.is_authenticated)
+    item = db.get_or_404(Item, item_id) 
+    return render_template("item.html", logged_in=current_user.is_authenticated, item=item)
 
 
 @app.route("/add-item", methods=['GET', 'POST'])
@@ -206,6 +209,7 @@ def add_item():
             unit = form.unit.data,
             unit_amt = form.unit_amt.data,
             img_url = form.img_url.data,
+            description = form.description.data,
             stock = form.stock.data,
         )
         db.session.add(new_item)
@@ -220,35 +224,54 @@ def edit_item(item_id):
     item = db.get_or_404(Item, item_id)
     form = ItemForm(
         name = item.name,
+        category = item.category,
         price = item.price,
         unit = item.unit,
         unit_amt = item.unit_amt,
         img_url = item.img_url,
+        description = item.description,
         stock = item.stock
     )
 
     if form.validate_on_submit():
         item.name = form.name.data
+        item.category = form.category.data
         item.price = form.price.data
         item.unit = form.unit.data
         item.unit_amt = form.unit_amt.data
         item.img_url = form.img_url.data
+        item.description = form.description.data
         item.stock = form.stock.data
     
         db.session.commit()
-        return redirect(url_for("home"))
-    return render_template("edit_item.html", current_user=current_user, editing=True, form=form, current_item=item)
+        return redirect(url_for("goto_item", logged_in=current_user.is_authenticated, item_id=item.id))
+    return render_template("edit_item.html", logged_in=current_user.is_authenticated, current_user=current_user, editing=True, form=form, item=item)
 
 
-@app.route("/delete/<int:item_id>", methods=['DELETE'])
+@app.route("/confirm-delete/<int:item_id>", methods=['GET', 'POST', 'DELETE'])
 @admin_only
-def delete_item(item_id):
+def confirm_delete_item(item_id):
     item_to_delete = db.get_or_404(Item, item_id)
-    db.session.delete(item_to_delete)
-    db.session.commit()
-    return redirect(url_for("home"))
+    form = ConfirmDeleteForm()
+
+    if form.validate_on_submit():
+        db.session.delete(item_to_delete)
+        db.session.commit()
+        return redirect(url_for("home", logged_in=current_user.is_authenticated))
+    return render_template("delete_item.html", logged_in=current_user.is_authenticated, form=form)
 
 
+
+#--- Cart-Relevant Pages ---#
+@app.route('/add-to-cart/<int:item_id>')
+def add_cart(item_id):
+    new_order = ""
+    item = db.get_or_404(Item, item_id) 
+    return render_template("item.html", logged_in=current_user.is_authenticated, item=item)
+
+
+
+#--- Product Category Pages ---#
 @app.route("/syrups")
 def syrup():
     db_items = db.session.execute(db.select(Item).order_by('id')).scalars()
@@ -274,7 +297,8 @@ if __name__ == '__main__':
     app.run(debug=True)
 
 
-# TODO 2) Add page for individual item
 # TODO 3) Add Profile page for editing a user's profile
 # TODO 5) Add page to view My Orders (current and past)
 # TODO 6) Add Checkout page to view cart. If nothing is in the cart, pull up the page showing that cart is empty.
+# TODO 7) Add Inventory page for admin
+# TODO 8) Add Customer list page for admin

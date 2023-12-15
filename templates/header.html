@@ -30,18 +30,17 @@
               <li><a class="dropdown-item" href="{{ url_for('jam') }}">Jam/Jelly</a></li>
             </ul>
           </span></li>
-          <!-- {% if manager: %} -->
-          <li><a href="#" class="nav-link px-2 link-body-emphasis">Inventory</a></li>
-          <li><a href="#" class="nav-link px-2 link-body-emphasis">Customers</a></li>
-          <!-- {% endif %} -->
+          {% if current_user.id == 1: %}
+          <li><a href="#" class="nav-link px-2 link-body-emphasis">Inventory [Under Construction]</a></li>
+          <li><a href="#" class="nav-link px-2 link-body-emphasis">Customers [Under Construction]</a></li>
+          {% endif %}
         </ul>
 
         <!-- Search Bar -->
         <div class="col-md-4">
           <div class="input-group">
             <span class="input-group-text" id="basic-addon1" style="max-height: 38px;">
-              <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" fill="currentColor" class="bi bi-search" viewBox="0 0 16 16">
-              </svg>
+              <img src="https://upload.wikimedia.org/wikipedia/commons/thumb/0/0b/Search_Icon.svg/768px-Search_Icon.svg.png" width="16" height="16" viewBox="0 0 16 16">
             </span>
             <form class="col-6 col-sm-6 col-lg-6 mb-3 mb-lg-0 me-lg-3" role="search">
               <input type="search" class="form-control" placeholder="Search..." aria-label="Search">
