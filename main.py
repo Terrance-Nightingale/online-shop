@@ -13,6 +13,7 @@ from flask_sqlalchemy import SQLAlchemy
 from functools import wraps
 from werkzeug.security import generate_password_hash, check_password_hash
 from sqlalchemy.orm import relationship
+from sqlalchemy.orm.exc import NoResultFound
 
 load_dotenv()
 
@@ -51,7 +52,10 @@ class User(UserMixin, db.Model):
     email = db.Column(db.String(250), unique=True, nullable=False)
     password = db.Column(db.String(50), unique=False, nullable=False)
     clearance = db.Column(db.Boolean, unique=False, nullable=False)
+    shipping_address = db.Column(db.String, nullable=True)
+    billing_address = db.Column(db.String, nullable=True)
     orders = relationship("Order", back_populates="customer")
+    cart = relationship("Cart", back_populates="customer", uselist=False)
 
 
 # Item Config
@@ -69,11 +73,14 @@ class Item(db.Model):
 
 
 # Ordered Item Config
-class OrderItem(UserMixin, Item, db.Model):
+class OrderItem(UserMixin, db.Model):
     __tablename__ = "ordered-items"
-    id = db.Column(db.Integer, db.ForeignKey("items.id"), primary_key=True)
+    id = db.Column(db.Integer, primary_key=True)
+    item_id = db.Column(db.Integer, db.ForeignKey("items.id"))
     order_id = db.Column(db.Integer, db.ForeignKey("orders.id"))
+    cart_id = db.Column(db.Integer, db.ForeignKey("carts.id"))
     parent_order = relationship("Order", back_populates="items")
+    parent_cart = relationship("Cart", back_populates="items")
     quantity = db.Column(db.Integer, unique=False, nullable=False)
 
 
@@ -84,11 +91,21 @@ class Order(UserMixin, db.Model):
     user_id = db.Column(db.Integer, db.ForeignKey("users.id"))
     customer = relationship("User", back_populates="orders")
     items = relationship("OrderItem", back_populates="parent_order")
+    shipping_address = db.Column(db.String, nullable=True)
+    billing_address = db.Column(db.String, nullable=True)
+    
+# Cart Config
+class Cart(UserMixin, db.Model):
+    __tablename__ = "carts"
+    id = db.Column(db.Integer, primary_key=True)
+    user_id = db.Column(db.Integer, db.ForeignKey("users.id"))
+    customer = relationship("User", back_populates="cart")
+    items = relationship("OrderItem", back_populates="parent_cart")
 
 
 # --- Initialize db for first time --- #
-with app.app_context():
-    db.create_all()
+# with app.app_context():
+#     db.create_all()
 
 
 #--- Home Page ---#
@@ -270,10 +287,39 @@ def confirm_delete_item(item_id):
 
 #--- Cart-Relevant Pages ---#
 @app.route('/add-to-cart/<int:item_id>')
-def add_cart(item_id):
-    new_order = ""
-    item = db.get_or_404(Item, item_id) 
-    return render_template("item.html", logged_in=current_user.is_authenticated, item=item)
+def cart_add(item_id):
+    try:
+        # Try to find the current user's cart
+        cart = current_user.cart
+
+        # If the user doesn't have a cart, create a new one
+        if cart is None:
+            cart = Cart(user_id=current_user.id, customer=current_user)
+            db.session.add(cart)
+            db.session.commit()
+
+        # Try to find an existing order item for the given item_id and cart
+        order_item = db.session.query(OrderItem).filter(
+            OrderItem.item_id == item_id,
+            OrderItem.cart_id == cart.id
+        ).one()
+
+    except NoResultFound:
+        # If not found, create a new order item
+        order_item = OrderItem(
+            item_id=item_id,
+            quantity=0,
+            parent_cart=cart
+        )
+        db.session.add(order_item)
+
+    # Increment the quantity
+    order_item.quantity += 1
+
+    # Commit changes
+    db.session.commit()
+
+    return redirect(url_for("home", logged_in=current_user.is_authenticated))
 
 
 
@@ -307,3 +353,4 @@ if __name__ == '__main__':
 # TODO 6) Add Checkout page to view cart. If nothing is in the cart, pull up the page showing that cart is empty.
 # TODO 7) Add Inventory page for admin
 # TODO 8) Add Customer list page for admin
+# TODO 9) Add "+" and "-" so that cart can be adjusted
