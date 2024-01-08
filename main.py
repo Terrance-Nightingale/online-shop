@@ -1,11 +1,11 @@
 import os
+from sqlalchemy import Nullable
+import stripe
+import json
 from forms import *
 from turtle import back
 from dotenv import load_dotenv
-from flask import Flask, abort, flash, render_template, redirect, url_for, request
-from flask_wtf import FlaskForm
-from wtforms import StringField, SubmitField, PasswordField
-from wtforms.validators import DataRequired, URL
+from flask import Flask, abort, flash, render_template, redirect, url_for, request, jsonify
 from flask_bootstrap import Bootstrap5
 from flask_ckeditor import CKEditor
 from flask_login import UserMixin, login_user, LoginManager, current_user, logout_user
@@ -30,6 +30,7 @@ db.init_app(app)
 login_manager = LoginManager()
 login_manager.init_app(app)
 
+
 @login_manager.user_loader
 def load_user(user_id):
     return db.get_or_404(User, user_id)
@@ -44,10 +45,15 @@ def admin_only(f):
     return wrapper
 
 
+# Set up Stripe Checkout session
+stripe.api_key = os.getenv('STRIPE_SECRET_KEY')
+YOUR_DOMAIN = 'http://localhost:4242'
+
+
 # User Config
 class User(UserMixin, db.Model):
     __tablename__ = "users"
-    id = db.Column(db.Integer, primary_key=True)
+    id = db.Column(db.Integer, primary_key=True, autoincrement=True)
     username = db.Column(db.String(250), unique=True, nullable=False)
     email = db.Column(db.String(250), unique=True, nullable=False)
     password = db.Column(db.String(50), unique=False, nullable=False)
@@ -61,7 +67,7 @@ class User(UserMixin, db.Model):
 # Item Config
 class Item(db.Model):
     __tablename__ = "items"
-    id = db.Column(db.Integer, primary_key=True)
+    id = db.Column(db.Integer, primary_key=True, autoincrement=True)
     name = db.Column(db.String(250), unique=True, nullable=False)
     category = db.Column(db.String, unique=False, nullable=False)
     price = db.Column(db.Float, unique=False, nullable=False)
@@ -87,7 +93,7 @@ class OrderItem(UserMixin, db.Model):
 # Order Config
 class Order(UserMixin, db.Model):
     __tablename__ = "orders"
-    id = db.Column(db.Integer, primary_key=True)
+    id = db.Column(db.Integer, primary_key=True, autoincrement=True)
     user_id = db.Column(db.Integer, db.ForeignKey("users.id"))
     customer = relationship("User", back_populates="orders")
     items = relationship("OrderItem", back_populates="parent_order")
@@ -104,8 +110,8 @@ class Cart(UserMixin, db.Model):
 
 
 # --- Initialize db for first time --- #
-# with app.app_context():
-#     db.create_all()
+with app.app_context():
+    db.create_all()
 
 
 #--- Home Page ---#
@@ -178,7 +184,7 @@ def profile(user_name, user_id):
 
 
 @app.route('/edit-profile/<string:user_name>/<int:user_id>', methods=["GET", "POST"])
-def edit_profile(user_name, user_id):
+def edit_profile(user_id):
     user = db.get_or_404(User, user_id)
         
     form = EditProfileForm(
@@ -225,6 +231,7 @@ def goto_item(item_id):
 def add_item():
     form = ItemForm()
     if form.validate_on_submit():
+        # Create Item in local database
         new_item = Item(
             name = form.name.data,
             category = form.category.data,
@@ -235,6 +242,28 @@ def add_item():
             description = form.description.data,
             stock = form.stock.data,
         )
+
+        # Create new Product in Stripe database
+        new_product = stripe.Product.create(
+            name=form.name.data,
+            description=form.description.data,
+            metadata={
+                'category': form.category.data,
+                'unit': form.unit.data,
+                'unit_amt': form.unit_amt.data,
+                'stock': form.stock.data
+                },
+            images=[form.img_url.data]
+            )
+
+        # Create Price for new item in Stripe database
+        stripe.Price.create(
+            product=new_product.id,
+            currency="usd",
+            unit_amount=form.price.data,
+            nickname=form.name.data,
+        )
+
         db.session.add(new_item)
         db.session.commit()
         return redirect(url_for("home", logged_in=current_user.is_authenticated))
@@ -265,6 +294,12 @@ def edit_item(item_id):
         item.img_url = form.img_url.data
         item.description = form.description.data
         item.stock = form.stock.data
+
+        
+        stripe.Product.modify(
+        "prod_NWjs8kKbJWmuuc",
+        metadata={"order_id": "6735"},
+        )
     
         db.session.commit()
         return redirect(url_for("goto_item", logged_in=current_user.is_authenticated, item_id=item.id))
@@ -321,6 +356,26 @@ def cart_add(item_id):
 
     return redirect(url_for("home", logged_in=current_user.is_authenticated))
 
+
+@app.route('/create-checkout-session', methods=['POST'])
+def create_checkout_session():
+    try:
+        checkout_session = stripe.checkout.Session.create(
+            line_items=[
+                {
+                    # Provide the exact Price ID (for example, pr_1234) of the product you want to sell
+                    'price': '{{PRICE_ID}}',
+                    'quantity': 1,
+                },
+            ],
+            mode='payment',
+            success_url=YOUR_DOMAIN + '/success.html',
+            cancel_url=YOUR_DOMAIN + '/cancel.html',
+        )
+    except Exception as e:
+        return str(e)
+
+    return redirect(checkout_session.url, code=303)
 
 
 #--- Product Category Pages ---#
