@@ -42,6 +42,15 @@ header {
     color: white
 }
 
+.quantity-box {
+    align-content: center;
+    align-self: center;
+    border: 2px solid black;
+    width: 50px !important;
+    display: flex;
+    justify-content: center;
+}
+
 #large-image-card {
     border-right: 2px solid rgb(110, 109, 109) !important;
     align-content: center !important;

@@ -224,8 +224,17 @@ def change_password(user_name, user_id):
 #--- Item-Relevant Pages ---#
 @app.route('/item/<int:item_id>')
 def goto_item(item_id):
+    # Grab current item
     item = db.get_or_404(Item, item_id) 
-    return render_template("item.html", logged_in=current_user.is_authenticated, item=item)
+
+    # Grab current cart if it exists
+    if current_user.cart:
+        cart = current_user.cart
+
+        # If cart exists, retrieve OrderItem (if any) that corresponds to the current Item
+        order_item = db.session.execute(db.select(OrderItem).where(OrderItem.item_id == item_id, OrderItem.cart_id == cart.id)).scalar()
+
+    return render_template("item.html", logged_in=current_user.is_authenticated, item=item, order_item=order_item)
 
 
 @app.route("/add-item", methods=['GET', 'POST'])
@@ -351,8 +360,8 @@ def confirm_delete_item(item_id):
 
 
 #--- Cart-Relevant Pages ---#
-@app.route('/add-to-cart/<int:item_id>')
-def cart_add(item_id):
+@app.route('/add-to-cart/<int:item_id>/<increment>')
+def cart_add(item_id, increment):
     if not current_user.cart:
         cart = Cart(
             user_id=current_user.id, 
@@ -376,13 +385,15 @@ def cart_add(item_id):
         db.session.add(order_item)
     else:
         order_item = db.session.execute(db.select(OrderItem).where(OrderItem.item_id == item_id, OrderItem.cart_id == cart.id)).scalar()
-        # order_item = db.session.get(OrderItem, ).where(OrderItem.item_id == item_id, OrderItem.cart_id == cart.id)
 
-    order_item.quantity += 1
-    print(order_item.quantity)
+    if increment == 'plus':
+        order_item.quantity += 1
+    elif increment == 'minus' and order_item.quantity > 0:
+        order_item.quantity -= 1
+
     db.session.commit()
 
-    return redirect(url_for("home", logged_in=current_user.is_authenticated))
+    return redirect(url_for("goto_item", item_id=item_id, logged_in=current_user.is_authenticated))
 
 
 @app.route('/create-checkout-session', methods=['POST'])
