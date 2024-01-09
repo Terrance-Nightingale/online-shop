@@ -2,9 +2,9 @@
 
 <body>
     <div class="container" id="main-wrapper">
-        <div class="container shadow-sm" id="large-item-box">
+        <div class="container shadow-sm col-5-lg col-3-sm" id="large-item-box", style="align-items: center;">
             <ul>
-                <h2>My Profile</h2>
+                <h2 style="margin-bottom: 50px;">My Profile</h2>
                 <h3>Username: {{ user.username }}</h2>
                 <h3>Email: {{ user.email }}</h2>
                 <a class="button-link" href="{{url_for('edit_profile', user_name=current_user.username, user_id=current_user.id) }}"><button type="button" class="w-100 btn btn-lg btn-primary mb-2" id="edit-button">Edit My Profile</button></a>

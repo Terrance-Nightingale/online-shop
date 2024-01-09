@@ -68,6 +68,8 @@ class User(UserMixin, db.Model):
 class Item(db.Model):
     __tablename__ = "items"
     id = db.Column(db.Integer, primary_key=True, autoincrement=True)
+    stripe_prod_id = db.Column(db.String, unique=True, nullable=False)
+    stripe_price_id = db.Column(db.String, unique=True, nullable=False)
     name = db.Column(db.String(250), unique=True, nullable=False)
     category = db.Column(db.String, unique=False, nullable=False)
     price = db.Column(db.Float, unique=False, nullable=False)
@@ -81,7 +83,7 @@ class Item(db.Model):
 # Ordered Item Config
 class OrderItem(UserMixin, db.Model):
     __tablename__ = "ordered-items"
-    id = db.Column(db.Integer, primary_key=True)
+    id = db.Column(db.Integer, primary_key=True, autoincrement=True)
     item_id = db.Column(db.Integer, db.ForeignKey("items.id"))
     order_id = db.Column(db.Integer, db.ForeignKey("orders.id"))
     cart_id = db.Column(db.Integer, db.ForeignKey("carts.id"))
@@ -180,11 +182,11 @@ def sign_up():
 @app.route('/<string:user_name>/<int:user_id>/my-profile', methods=["GET", "POST"])
 def profile(user_name, user_id):
     user = db.get_or_404(User, user_id)
-    return render_template("profile.html", user=user)
+    return render_template("profile.html", user=user, logged_in=current_user.is_authenticated)
 
 
 @app.route('/edit-profile/<string:user_name>/<int:user_id>', methods=["GET", "POST"])
-def edit_profile(user_id):
+def edit_profile(user_name, user_id):
     user = db.get_or_404(User, user_id)
         
     form = EditProfileForm(
@@ -231,19 +233,7 @@ def goto_item(item_id):
 def add_item():
     form = ItemForm()
     if form.validate_on_submit():
-        # Create Item in local database
-        new_item = Item(
-            name = form.name.data,
-            category = form.category.data,
-            price = form.price.data,
-            unit = form.unit.data,
-            unit_amt = form.unit_amt.data,
-            img_url = form.img_url.data,
-            description = form.description.data,
-            stock = form.stock.data,
-        )
-
-        # Create new Product in Stripe database
+        # Create new Product in Stripe db
         new_product = stripe.Product.create(
             name=form.name.data,
             description=form.description.data,
@@ -256,12 +246,26 @@ def add_item():
             images=[form.img_url.data]
             )
 
-        # Create Price for new item in Stripe database
-        stripe.Price.create(
+        # Create Price for new item in Stripe db
+        new_price = stripe.Price.create(
             product=new_product.id,
             currency="usd",
             unit_amount=form.price.data,
             nickname=form.name.data,
+        )
+
+        # Create Item in local db
+        new_item = Item(
+            stripe_prod_id = new_product.id,
+            stripe_price_id = new_price.id,
+            name = form.name.data,
+            category = form.category.data,
+            price = form.price.data,
+            unit = form.unit.data,
+            unit_amt = form.unit_amt.data,
+            img_url = form.img_url.data,
+            description = form.description.data,
+            stock = form.stock.data,
         )
 
         db.session.add(new_item)
@@ -286,6 +290,34 @@ def edit_item(item_id):
     )
 
     if form.validate_on_submit():
+        # Modify associated product in Stripe db
+        stripe.Product.modify(item.stripe_prod_id,
+                              name=form.name.data,
+                              description=form.description.data,
+                              metadata={
+                                  'category': form.category.data,
+                                  'unit': form.unit.data,
+                                  'unit_amt': form.unit_amt.data,
+                                  'stock': form.stock.data
+                                  },
+                              images=[form.img_url.data])
+        
+        if form.price.data != item.price:
+            # Inactivate old Price
+            stripe.Price.modify(item.stripe_price_id, active=False)
+
+            # Create new Price for Product in Stripe db
+            new_price = stripe.Price.create(
+                product=item.stripe_prod_id,
+                currency="usd",
+                unit_amount=form.price.data,
+                nickname=form.name.data,
+            )
+
+            # Modify produce price in local db
+            item.stripe_price_id = new_price.id
+
+        # Modify product in local db
         item.name = form.name.data
         item.category = form.category.data
         item.price = form.price.data
@@ -295,14 +327,8 @@ def edit_item(item_id):
         item.description = form.description.data
         item.stock = form.stock.data
 
-        
-        stripe.Product.modify(
-        "prod_NWjs8kKbJWmuuc",
-        metadata={"order_id": "6735"},
-        )
-    
         db.session.commit()
-        return redirect(url_for("goto_item", logged_in=current_user.is_authenticated, item_id=item.id))
+        return redirect(url_for("home", logged_in=current_user.is_authenticated, item_id=item.id))
     return render_template("edit_item.html", logged_in=current_user.is_authenticated, current_user=current_user, editing=True, form=form, item=item)
 
 
@@ -313,6 +339,10 @@ def confirm_delete_item(item_id):
     form = ConfirmDeleteForm()
 
     if form.validate_on_submit():
+        # Inactivate Product in Stripe db
+        stripe.Product.modify(item_to_delete.stripe_prod_id, active=False)
+
+        # Delete product in local db
         db.session.delete(item_to_delete)
         db.session.commit()
         return redirect(url_for("home", logged_in=current_user.is_authenticated))
@@ -323,35 +353,33 @@ def confirm_delete_item(item_id):
 #--- Cart-Relevant Pages ---#
 @app.route('/add-to-cart/<int:item_id>')
 def cart_add(item_id):
-    try:
-        # Try to find the current user's cart
+    if not current_user.cart:
+        cart = Cart(
+            user_id=current_user.id, 
+            customer=current_user
+            )
+            
+        db.session.add(cart)
+        db.session.commit()
+        print("No cart found")
+    else:
         cart = current_user.cart
 
-        # If the user doesn't have a cart, create a new one
-        if cart is None:
-            cart = Cart(user_id=current_user.id, customer=current_user)
-            db.session.add(cart)
-            db.session.commit()
-
-        # Try to find an existing order item for the given item_id and cart
-        order_item = db.session.query(OrderItem).filter(
-            OrderItem.item_id == item_id,
-            OrderItem.cart_id == cart.id
-        ).one()
-
-    except NoResultFound:
-        # If not found, create a new order item
+    # If the cart has no items or if the current item being added is not yet in the cart, creates a new OrderItem and adds it to the cart
+    if not cart.items or not db.session.query(OrderItem).filter(OrderItem.item_id == item_id, OrderItem.cart_id == cart.id):
         order_item = OrderItem(
-            item_id=item_id,
-            quantity=0,
-            parent_cart=cart
+        item_id=item_id,
+        quantity=0,
+        parent_cart=cart
         )
+
         db.session.add(order_item)
+    else:
+        order_item = db.session.execute(db.select(OrderItem).where(OrderItem.item_id == item_id, OrderItem.cart_id == cart.id)).scalar()
+        # order_item = db.session.get(OrderItem, ).where(OrderItem.item_id == item_id, OrderItem.cart_id == cart.id)
 
-    # Increment the quantity
     order_item.quantity += 1
-
-    # Commit changes
+    print(order_item.quantity)
     db.session.commit()
 
     return redirect(url_for("home", logged_in=current_user.is_authenticated))

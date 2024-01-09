@@ -61,12 +61,12 @@ header {
 
 #login-box {
     max-width: 400px !important;
-    padding-top: 200px !important;
+    padding-top: 300px !important;
 }
 
 #additem-box {
     max-width: 400px !important;
-    padding-top: 200px !important;
+    padding-top: 300px !important;
     margin-bottom: 200px !important;
 }
 
@@ -98,7 +98,7 @@ header {
 }
 
 #large-item-box {
-    padding-top: 200px;
+    padding-top: 300px;
     display: flex;
 }
 

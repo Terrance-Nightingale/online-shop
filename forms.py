@@ -9,7 +9,7 @@ from flask_ckeditor import CKEditorField
 class ItemForm(FlaskForm):
     name = StringField("Product Name", validators=[DataRequired()])
     category = SelectField("Product Type", choices=[("syrup", "Syrup"), ("hotsauce", "Hot Sauce"), ("jam", "Jam/Jelly")], coerce=str,  validators=[DataRequired()])
-    price = DecimalField("USD Price (in cents)", places=2, validators=[DataRequired()])
+    price = IntegerField("USD Price (in cents)", validators=[DataRequired()])
     unit = SelectField("Weight/Volume Unit (oz, g, or ml)", choices=[("oz", "Ounces"), ("g", "Grams"), ("ml", "Milliliters")], validators=[DataRequired()])
     unit_amt = DecimalField("Weight/Volume Amount", places=1, validators=[DataRequired()])
     img_url = StringField("Product Image URL", validators=[DataRequired(), URL()])

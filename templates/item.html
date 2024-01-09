@@ -11,7 +11,7 @@
                 </div>
                 <div class="col">
                     <h1>{{ item.name }}</h1>
-                    <h2 style="font-size: 30px !important;">${{ item.price }} / {{ item.unit_amt }} {{ item.unit }}</h2>
+                    <h2 style="font-size: 30px !important;">${{ "%.2f"|format(item.price / 100) }} / {{ item.unit_amt }} {{ item.unit }}</h2>
                     <h3>{{ item.description }}</h3>
                     <a class="button-link" href="{{ url_for('cart_add', item_id=item.id) }}"><button type="button" class="w-90 btn btn-lg btn-primary my-3">Add to cart</button></a>
                     {% if current_user.id == 1: %}
