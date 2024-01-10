@@ -550,6 +550,5 @@ if __name__ == '__main__':
     app.run(debug=True)
 
 
-# TODO 5) Add page to view My Orders (current and past)
 # TODO 7) Add Inventory page for admin
 # TODO 8) Add Customer list page for admin
