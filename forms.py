@@ -13,7 +13,7 @@ class ItemForm(FlaskForm):
     unit = SelectField("Weight/Volume Unit (oz, g, or ml)", choices=[("oz", "Ounces"), ("g", "Grams"), ("ml", "Milliliters")], validators=[DataRequired()])
     unit_amt = DecimalField("Weight/Volume Amount", places=1, validators=[DataRequired()])
     img_url = StringField("Product Image URL", validators=[DataRequired(), URL()])
-    stock = IntegerField("Stock", validators=[DataRequired()])
+    stock = IntegerField("Stock")
     description = StringField("Item Description", validators=[DataRequired()])
     submit = SubmitField("Save Changes")
 

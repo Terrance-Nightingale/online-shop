@@ -31,6 +31,14 @@ header {
     background-color: white;
 }
 
+.order-list-box {
+    border: 2px solid black;
+    padding-inline: 10px;
+    align-items: left;
+    justify-content: left;
+    justify-items: left;
+}
+
 .item-link {
     text-decoration: none;
     color: black;
@@ -39,7 +47,13 @@ header {
 
 .button-link {
     text-decoration: none;
-    color: white
+    color: white;
+}
+
+.order-link {
+    text-decoration: none;
+    color: black;
+    font-size: 14px;
 }
 
 .quantity-box {
@@ -134,3 +148,16 @@ header {
     background-color: grey;
     border-color: grey;
 }
+
+#home-button {
+    background-color: whitesmoke;
+    border-color: whitesmoke;
+    color: black;
+}
+
+#home-button:hover {
+    background-color: rgb(223, 223, 223);
+    border-color: rgb(223, 223, 223);
+    color: black;
+}
+

@@ -1,9 +1,9 @@
 import os
-from sqlalchemy import Nullable
+from datetime import date
+from xml.dom.minidom import Attr
+from sqlalchemy import Null, Nullable
 import stripe
-import json
 from forms import *
-from turtle import back
 from dotenv import load_dotenv
 from flask import Flask, abort, flash, render_template, redirect, url_for, request, jsonify
 from flask_bootstrap import Bootstrap5
@@ -13,7 +13,6 @@ from flask_sqlalchemy import SQLAlchemy
 from functools import wraps
 from werkzeug.security import generate_password_hash, check_password_hash
 from sqlalchemy.orm import relationship
-from sqlalchemy.orm.exc import NoResultFound
 
 load_dotenv()
 
@@ -47,7 +46,7 @@ def admin_only(f):
 
 # Set up Stripe Checkout session
 stripe.api_key = os.getenv('STRIPE_SECRET_KEY')
-YOUR_DOMAIN = 'http://localhost:4242'
+YOUR_DOMAIN = os.getenv('DOMAIN')
 
 
 # User Config
@@ -87,25 +86,29 @@ class OrderItem(UserMixin, db.Model):
     item_id = db.Column(db.Integer, db.ForeignKey("items.id"))
     order_id = db.Column(db.Integer, db.ForeignKey("orders.id"))
     cart_id = db.Column(db.Integer, db.ForeignKey("carts.id"))
+    item = relationship('Item', foreign_keys='OrderItem.item_id')
     parent_order = relationship("Order", back_populates="items")
     parent_cart = relationship("Cart", back_populates="items")
     quantity = db.Column(db.Integer, unique=False, nullable=False)
 
 
 # Order Config
+# !! Shipping and billing addresses will be dealt with on the Stripe dashboard !!
+
 class Order(UserMixin, db.Model):
     __tablename__ = "orders"
     id = db.Column(db.Integer, primary_key=True, autoincrement=True)
     user_id = db.Column(db.Integer, db.ForeignKey("users.id"))
+    date = db.Column(db.String(250))
     customer = relationship("User", back_populates="orders")
     items = relationship("OrderItem", back_populates="parent_order")
-    shipping_address = db.Column(db.String, nullable=True)
-    billing_address = db.Column(db.String, nullable=True)
+    # shipping_address = db.Column(db.String, nullable=True)
+    # billing_address = db.Column(db.String, nullable=True)
     
 # Cart Config
 class Cart(UserMixin, db.Model):
     __tablename__ = "carts"
-    id = db.Column(db.Integer, primary_key=True)
+    id = db.Column(db.Integer, primary_key=True, autoincrement=True)
     user_id = db.Column(db.Integer, db.ForeignKey("users.id"))
     customer = relationship("User", back_populates="cart")
     items = relationship("OrderItem", back_populates="parent_cart")
@@ -221,6 +224,18 @@ def change_password(user_name, user_id):
     return render_template("change_password.html", logged_in=current_user.is_authenticated, form=form)
 
 
+@app.route('/string:user_name>/my_orders', methods=["GET"])
+def my_orders():
+        return render_template("my_orders.html", logged_in=current_user.is_authenticated)
+
+
+@app.route('/string:user_name>/my_orders/<int:order_id>', methods=["GET"])
+def order(order_id):
+        order = db.get_or_404(Order, order_id)
+        return render_template("order.html", logged_in=current_user.is_authenticated, order=order)
+
+
+
 #--- Item-Relevant Pages ---#
 @app.route('/item/<int:item_id>')
 def goto_item(item_id):
@@ -228,11 +243,17 @@ def goto_item(item_id):
     item = db.get_or_404(Item, item_id) 
 
     # Grab current cart if it exists
-    if current_user.cart:
-        cart = current_user.cart
-
-        # If cart exists, retrieve OrderItem (if any) that corresponds to the current Item
-        order_item = db.session.execute(db.select(OrderItem).where(OrderItem.item_id == item_id, OrderItem.cart_id == cart.id)).scalar()
+    try:
+        if current_user.cart:
+            cart = current_user.cart
+            # If cart exists, retrieve OrderItem (if any) that corresponds to the current Item
+            order_item = db.session.execute(db.select(OrderItem).where(OrderItem.item_id == item_id, OrderItem.cart_id == cart.id)).scalar()
+        else:
+            order_item = Null
+    
+    # Redirect anonymous user to login page
+    except AttributeError:
+        return redirect(url_for('login'))
 
     return render_template("item.html", logged_in=current_user.is_authenticated, item=item, order_item=order_item)
 
@@ -362,59 +383,145 @@ def confirm_delete_item(item_id):
 #--- Cart-Relevant Pages ---#
 @app.route('/add-to-cart/<int:item_id>/<increment>')
 def cart_add(item_id, increment):
-    if not current_user.cart:
-        cart = Cart(
-            user_id=current_user.id, 
-            customer=current_user
-            )
-            
-        db.session.add(cart)
-        db.session.commit()
-        print("No cart found")
-    else:
-        cart = current_user.cart
+    try:
+        if not current_user.cart:
+            cart = Cart(
+                user_id=current_user.id, 
+                customer=current_user
+                )
+                
+            db.session.add(cart)
+            db.session.commit()
+        else:
+            cart = current_user.cart
+    
+    # Redirect anonymous user to login page
+    except AttributeError:
+        return redirect(url_for('login'))
+
+
+    filter_item = db.session.query(OrderItem).filter(OrderItem.item_id == item_id, OrderItem.cart_id == cart.id)
+    search_item = db.session.execute(db.select(OrderItem).where(OrderItem.item_id == item_id, OrderItem.cart_id == cart.id)).scalar()
 
     # If the cart has no items or if the current item being added is not yet in the cart, creates a new OrderItem and adds it to the cart
-    if not cart.items or not db.session.query(OrderItem).filter(OrderItem.item_id == item_id, OrderItem.cart_id == cart.id):
+    if not cart.items or not filter_item or not search_item:
         order_item = OrderItem(
         item_id=item_id,
         quantity=0,
         parent_cart=cart
         )
+        print(order_item.quantity)
 
         db.session.add(order_item)
     else:
-        order_item = db.session.execute(db.select(OrderItem).where(OrderItem.item_id == item_id, OrderItem.cart_id == cart.id)).scalar()
+        order_item = search_item
+        print(order_item.quantity)
 
+    # Add or remove 1 qty of the current item from the cart
     if increment == 'plus':
         order_item.quantity += 1
     elif increment == 'minus' and order_item.quantity > 0:
         order_item.quantity -= 1
 
     db.session.commit()
-
     return redirect(url_for("goto_item", item_id=item_id, logged_in=current_user.is_authenticated))
 
 
-@app.route('/create-checkout-session', methods=['POST'])
+@app.route('/create-checkout-session', methods=['GET', 'POST'])
 def create_checkout_session():
-    try:
-        checkout_session = stripe.checkout.Session.create(
-            line_items=[
+    # Attempts to pull current user's cart (if any). Redirects user to empty cart page if no cart found
+    cart = current_user.cart
+    cart_qty = 0
+
+    print(cart)
+
+    if cart == None:
+        return redirect(url_for("empty", logged_in=current_user.is_authenticated))
+    else:
+        for item in cart.items:
+            cart_qty += item.quantity
+        if cart_qty == 0:
+            return redirect(url_for("empty", logged_in=current_user.is_authenticated))
+    
+        # Attempts to create a checkout.Session and populates line_items with contents of cart. Returns error if unsuccessful
+        try:
+            checkout_session = stripe.checkout.Session.create(
+                shipping_address_collection={"allowed_countries": ["US", "CA"]},
+                shipping_options=[
                 {
-                    # Provide the exact Price ID (for example, pr_1234) of the product you want to sell
-                    'price': '{{PRICE_ID}}',
-                    'quantity': 1,
+                    "shipping_rate_data": {
+                    "type": "fixed_amount",
+                    "fixed_amount": {"amount": 0, "currency": "usd"},
+                    "display_name": "Free shipping",
+                    "delivery_estimate": {
+                        "minimum": {"unit": "business_day", "value": 5},
+                        "maximum": {"unit": "business_day", "value": 7},
+                    },
+                    },
                 },
-            ],
-            mode='payment',
-            success_url=YOUR_DOMAIN + '/success.html',
-            cancel_url=YOUR_DOMAIN + '/cancel.html',
-        )
-    except Exception as e:
-        return str(e)
+                {
+                    "shipping_rate_data": {
+                    "type": "fixed_amount",
+                    "fixed_amount": {"amount": 500, "currency": "usd"},
+                    "display_name": "Two-day shipping",
+                    "delivery_estimate": {
+                        "minimum": {"unit": "business_day", "value": 2},
+                        "maximum": {"unit": "business_day", "value": 2},
+                    },
+                    },
+                },
+                {
+                    "shipping_rate_data": {
+                    "type": "fixed_amount",
+                    "fixed_amount": {"amount": 1500, "currency": "usd"},
+                    "display_name": "Next day air",
+                    "delivery_estimate": {
+                        "minimum": {"unit": "business_day", "value": 1},
+                        "maximum": {"unit": "business_day", "value": 1},
+                    },
+                    },
+                },
+                ],
+                line_items=[{'price': f'{order_item.item.stripe_price_id}', 'quantity': order_item.quantity} for order_item in cart.items if order_item.quantity > 0],
+                mode='payment',
+                success_url= YOUR_DOMAIN + 'success',
+                cancel_url= YOUR_DOMAIN + 'cancel',
+            )
+        except Exception as e:
+            return str(e)
 
     return redirect(checkout_session.url, code=303)
+
+
+@app.route('/success', methods=['GET', 'POST'])
+def success():
+    # Create Order and links cart items to it
+    cart = current_user.cart
+    order = Order(
+        user_id = current_user.id,
+        date = date.today().strftime("%m/%d/%Y")
+    )
+    db.session.add(order)
+
+    for item in cart.items:
+        if item.quantity > 0:
+            item.order_id = order.id
+        item.cart_id = Null
+
+    # Delete the Cart
+    db.session.delete(current_user.cart)
+    db.session.commit()
+    return render_template('success.html', logged_in=current_user.is_authenticated)
+
+
+@app.route('/cancel', methods=['GET'])
+def cancel():
+    return render_template('cancel.html', logged_in=current_user.is_authenticated)
+
+
+@app.route('/cart-empty', methods=['GET'])
+def empty():
+    return render_template('empty.html', logged_in=current_user.is_authenticated)
 
 
 #--- Product Category Pages ---#
@@ -444,7 +551,5 @@ if __name__ == '__main__':
 
 
 # TODO 5) Add page to view My Orders (current and past)
-# TODO 6) Add Checkout page to view cart. If nothing is in the cart, pull up the page showing that cart is empty.
 # TODO 7) Add Inventory page for admin
 # TODO 8) Add Customer list page for admin
-# TODO 9) Add "+" and "-" so that cart can be adjusted
